@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: homework
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      nodeSelector:
+        homework: "true"
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            exec:
+              command:
+              - cat
+              - /homework/index.html
+            initialDelaySeconds: 0
+            periodSeconds: 5
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "rm", "-f", "/homework/index.html" ]
+          volumeMounts:
+            - name: front-static
+              mountPath: "/homework"
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/
+      initContainers:
+        - name: download-static
+          image: busybox:1.28
+          command: 
+              - wget
+              - "-O"
+              - "/init/index.html"
+              - http://info.cern.ch
+          volumeMounts:
+            - name: front-static
+              mountPath: "/init"
+      volumes:
+        - name: front-static
+        - name: nginx-conf 
+          configMap:
+            name: nginx-conf
+            items:
+            - key: default.conf
+              path: default.conf
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: homework
+data:
+  default.conf: |
+    server {
+        listen 8000;
+
+        server_name _;
+        root /homework;
+        index index.html;
+        location / { 
+          try_files $uri $uri/ /index.html;
+        }
+    }
+    
