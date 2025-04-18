@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homework-deployment
+  namespace: homework
+  labels:
+    app: homework-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: homework-deployment
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: homework-deployment
+    spec:
+      serviceAccountName: monitoring
+      nodeSelector:
+        homework: "true"
+      containers:
+      - name: nginx-server
+        image: nginx
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: shared-data
+          mountPath: /homework
+        - name: config-volume
+          mountPath: /homework/conf
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          cat > /etc/nginx/conf.d/default.conf <<EOF
+          server {
+            listen 8000;
+            server_name localhost;
+            location / {
+              root /homework;
+              index index.html;
+            }
+          }
+          EOF
+          nginx -g "daemon off;"
+        lifecycle:
+          postStart:
+              exec:
+                command: 
+                  - "sh"
+                  - "-c"
+                  - |
+                    curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/metrics > /homework/metrics.html
+          preStop:
+            exec:
+              command: ["rm", "/homework/index.html"]
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
+      initContainers:
+      - name: init-index-page
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "<html><body><h1>Undersammy otus homework 1</h1></body></html>" > /init/index.html
+        volumeMounts:
+        - name: shared-data
+          mountPath: /init
+      volumes:
+      - name: shared-data
+        persistentVolumeClaim:
+          claimName: homework-pvc
+      - name: config-volume
+        configMap:
+          name: homework-cm
