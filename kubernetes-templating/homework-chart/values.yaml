@@ -1,0 +1,77 @@
+global:
+  namespace: homework
+
+# app
+app:
+  name: homework-deployment
+  replicas: 3
+  strategy:
+    maxUnavailable: 1
+  nodeSelector: false
+  containers:
+    serverName: nginx-server 
+    serverImage: nginx
+    serverPort: 8000
+  probe: true
+  probeSettings:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+  volumes:
+    pvcName: shared-data
+    cmName: config-volume
+
+# service
+service:
+  name: homework-service
+  app: homework-deployment
+  ports:
+    port: 80
+    targetPort: 8000
+  type: ClusterIP
+
+# storageClass
+storageClass:
+  name: homework-storageclass
+
+# pvc
+pvc:
+  name: homework-pvc
+  storage: 1Gi
+  volumeMode: Filesystem
+  accessModes: ReadWriteOnce
+
+# ingress
+ingress:
+  enabled: true
+  name: homework-ingress
+  host: homework.otus
+
+# SA-cd
+SA:
+  name_admin: cd 
+  name_monitoring: monitoring
+
+# clusterRole
+clusterRole:
+  name: metrics-access
+
+# crb
+clusterRoleBinding:
+  name: crb-monitoring
+
+# rb
+roleBinding:
+  name: rb-cd
+
+# cm
+configMap:
+  name: homework-cm
+  data1: homework-data1
+  data2: homework-data2

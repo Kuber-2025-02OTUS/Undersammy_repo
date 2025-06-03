@@ -1,0 +1,6 @@
+1. Get the application URL by running these commands:
+endpoints:
+  - homework.otus/
+  - homework.otus/homepage
+  - homework.otus/conf/homework-data1.txt
+  - homework.otus/conf/homework-data2.txt
