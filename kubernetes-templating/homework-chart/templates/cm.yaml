@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configMap.name }}
+  namespace: {{ .Values.global.namespace }}
+data:
+  homework-data1.txt: {{ .Values.configMap.data1 }}
+  homework-data2.txt: {{ .Values.configMap.data2 }}

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "webserver.fullname" . }}-deployment
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ include "webserver.fullname" . }}-deployment
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "webserver.fullname" . }}-deployment
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.app.maxUnavailable }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "webserver.fullname" . }}-deployment
+    spec:
+      serviceAccountName: {{ .Values.SA.name_monitoring}}
+      {{- if .Values.app.nodeSelector }}
+      nodeSelector:
+        homework: "true"
+      {{- end }}
+      containers:
+      - name: {{ .Values.app.containers.serverName}}
+        image: {{ .Values.app.containers.serverImage}}
+        ports:
+        - containerPort: {{ .Values.app.containers.serverPort }}
+        volumeMounts:
+        - name: shared-data
+          mountPath: /homework
+        - name: config-volume
+          mountPath: /homework/conf
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          cat > /etc/nginx/conf.d/default.conf <<EOF
+          server {
+            listen 8000;
+            server_name localhost;
+            location / {
+              root /homework;
+              index index.html;
+            }
+          }
+          EOF
+          nginx -g "daemon off;"
+        lifecycle:
+          postStart:
+              exec:
+                command: 
+                  - "sh"
+                  - "-c"
+                  - |
+                    curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/metrics > /homework/metrics.html
+          preStop:
+            exec:
+              command: ["rm", "/homework/index.html"]
+        {{- if .Values.app.probe }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.app.containers.serverPort }}
+          initialDelaySeconds: {{ .Values.app.probeSettings.initialDelaySeconds }}
+          periodSeconds: {{ .Values.app.probeSettings.periodSeconds }}
+        {{- end }}
+        resources:
+          requests:
+            cpu: {{ .Values.app.resources.requests.cpu }}
+            memory: {{ .Values.app.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.app.resources.limits.cpu }}
+            memory: {{ .Values.app.resources.limits.memory }}
+      initContainers:
+      - name: init-index-page
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "<html><body><h1>Undersammy otus homework 1</h1></body></html>" > /init/index.html
+        volumeMounts:
+        - name: {{ .Values.app.volumes.pvcName }}
+          mountPath: /init
+      volumes:
+      - name: {{ .Values.app.volumes.pvcName }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.pvc.name }}
+      - name: {{ .Values.app.volumes.cmName }}
+        configMap:
+          name: {{ .Values.configMap.name }}
