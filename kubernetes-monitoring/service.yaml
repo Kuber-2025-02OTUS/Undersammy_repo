@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app.kubernetes.io/instance: nginx-service
+    app.kubernetes.io/name: nginx-service
+  namespace: homework
+spec:
+  selector:
+    app.kubernetes.io/instance: nginx-server
+    app.kubernetes.io/name: nginx-server
+  type: ClusterIP
+  ports:
+  - port: 9113
+    targetPort: exporter
+    protocol: TCP
+    name: nginx-port
