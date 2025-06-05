@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-server
+  namespace: homework
+  labels:
+    app.kubernetes.io/instance: nginx-server
+    app.kubernetes.io/name: nginx-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nginx-server
+      app.kubernetes.io/name: nginx-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: nginx-server
+        app.kubernetes.io/name: nginx-server
+    spec:
+      containers:
+      - name: nginx-nlb
+        image: nginx
+        volumeMounts:
+        - name: "nginx-config"
+          mountPath: /etc/nginx/conf.d/webserver_8080.conf
+          subPath: webserver_8080.conf
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
+      - name: nginx-exp
+        image: nginx/nginx-prometheus-exporter:1.4.0
+        ports:
+        - containerPort: 9113
+          name: exporter
+        env:
+        - name: scrape-uri
+          value: "http://nginx-nlb:8080/stub_status"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
