@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homework-cm
+  namespace: homework
+data:
+  homework-data1.txt: |
+    homework-data1
+  homework-data2.txt: |
+    homework-data2

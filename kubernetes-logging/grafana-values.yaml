@@ -1,0 +1,28 @@
+adminUser: admin
+adminPassword: admin
+
+service:
+  type: ClusterIP
+  port: 3000
+
+nodeSelector:
+  node-role: infra
+
+tolerations:
+- key: "node-role"
+  operator: "Equal"
+  value: "infra"
+  effect: "NoSchedule"
+
+persistence:
+  enabled: false 
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        url: http://loki-loki-distributed-gateway.loki-space.svc.cluster.local
+        access: proxy
+        isDefault: true

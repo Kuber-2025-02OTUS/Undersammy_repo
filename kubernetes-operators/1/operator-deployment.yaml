@@ -15,7 +15,7 @@ spec:
       serviceAccountName: mysql-operator-sa
       containers:
       - name: operator
-        image: roflmaoinmysoul/mysql-operator:1.0.0
+        image: sl/mysql-operator:1.0.0
         env:
         - name: WATCH_NAMESPACE
           value: "default"

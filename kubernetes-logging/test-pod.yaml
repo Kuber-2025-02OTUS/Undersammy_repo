@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ping-ya-ru
+  namespace: loki-space
+  labels:
+    app: ping-logger
+spec:
+  selector:
+    matchLabels:
+      app: ping-logger
+  template:
+    metadata:
+      labels:
+        app: ping-logger
+    spec:
+      tolerations:
+        - key: "node-role"
+          operator: "Equal"
+          value: "infra"
+          effect: "NoSchedule"
+      containers:
+        - name: ping-container
+          image: alpine:latest
+          command: ["sh", "-c"]
+          args:
+            - >-
+              while true; do
+                ping -c 5 ya.ru;
+                echo "Ping check at $(date)";
+                sleep 30;
+              done
